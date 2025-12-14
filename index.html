@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScanX - QR Code Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 30%, #d4af37 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            margin-bottom: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #ffffff 0%, #d4af37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 1;
+            letter-spacing: 1px;
+            font-weight: 300;
+            color: #d4af37;
+            text-transform: uppercase;
+            font-size: 0.95rem;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        .scanner-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .option-btn {
+            padding: 20px;
+            border: 2px solid #d4af37;
+            background: linear-gradient(135deg, #f5f5f5 0%, #f0e6d2 50%, #e6d5a8 100%);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .option-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .option-btn svg {
+            width: 40px;
+            height: 40px;
+            margin-bottom: 10px;
+            stroke: #667eea;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 30px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #video {
+            width: 100%;
+            display: block;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 3px solid #667eea;
+            pointer-events: none;
+        }
+
+        .scanner-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #667eea;
+            box-shadow: 0 0 10px #667eea;
+            animation: scan 2s linear infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+
+        .upload-area {
+            display: none;
+            border: 3px dashed #667eea;
+            border-radius: 16px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .upload-area.active {
+            display: block;
+        }
+
+        .upload-area:hover {
+            background: #f0f4ff;
+            border-color: #5568d3;
+        }
+
+        .upload-area svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 20px;
+            stroke: #667eea;
+        }
+
+        .upload-area p {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-area span {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .result-container {
+            display: none;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .result-container.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .result-header svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .result-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            word-break: break-all;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .result-type {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-bottom: 10px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f4ff;
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .main-card {
+                padding: 20px;
+            }
+
+            .scanner-options {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>SCAN✕</h1>
+            <p>Decode QR codes instantly with camera or image upload</p>
+        </div>
+
+        <div class="main-card">
+            <div class="scanner-options">
+                <button class="option-btn" id="cameraBtn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <div>Scan with Camera</div>
+                </button>
+                <button class="option-btn" id="uploadBtn">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <div>Upload Image</div>
+                </button>
+            </div>
+
+            <div class="scanner-container" id="scannerContainer" style="display: none;">
+                <video id="video" autoplay playsinline></video>
+                <div class="scanner-overlay">
+                    <div class="scanner-line"></div>
+                </div>
+            </div>
+
+            <div class="upload-area" id="uploadArea">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <p>Click to upload or drag & drop</p>
+                <span>Supports JPG, PNG, GIF</span>
+            </div>
+            <input type="file" id="fileInput" accept="image/*">
+
+            <canvas id="canvas" style="display: none;"></canvas>
+
+            <div class="status-message" id="statusMessage"></div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="result-container" id="resultContainer">
+                <div class="result-header">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>QR Code Detected!</span>
+                </div>
+                <div class="result-type" id="resultType">URL</div>
+                <div class="result-content" id="resultContent"></div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" id="copyBtn">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Copy
+                    </button>
+                    <button class="btn btn-secondary" id="openBtn" style="display: none;">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                        </svg>
+                        Open
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script>
+        // Wait for library to load
+        window.addEventListener('load', function() {
+            if (typeof jsQR === 'undefined') {
+                console.error('jsQR library failed to load');
+                document.getElementById('errorMessage').textContent = 'Scanner library failed to load. Please check your internet connection and refresh.';
+                document.getElementById('errorMessage').classList.add('show');
+            }
+        });
+
+        let stream = null;
+        let scanning = false;
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scannerContainer = document.getElementById('scannerContainer');
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultContent = document.getElementById('resultContent');
+        const resultType = document.getElementById('resultType');
+        const statusMessage = document.getElementById('statusMessage');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Camera button
+        document.getElementById('cameraBtn').addEventListener('click', startCamera);
+
+        // Upload button
+        document.getElementById('uploadBtn').addEventListener('click', () => {
+            stopCamera();
+            uploadArea.classList.add('active');
+            scannerContainer.style.display = 'none';
+            statusMessage.textContent = '';
+            resultContainer.classList.remove('show');
+        });
+
+        // Upload area click
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // File input
+        fileInput.addEventListener('change', handleFileUpload);
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#5568d3';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.borderColor = '#667eea';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#667eea';
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                processImageFile(file);
+            }
+        });
+
+        async function startCamera() {
+            try {
+                uploadArea.classList.remove('active');
+                resultContainer.classList.remove('show');
+                errorMessage.classList.remove('show');
+                statusMessage.textContent = 'Starting camera...';
+
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                
+                video.srcObject = stream;
+                scannerContainer.style.display = 'block';
+                statusMessage.textContent = 'Point your camera at a QR code';
+                scanning = true;
+                requestAnimationFrame(scanFrame);
+            } catch (err) {
+                showError('Unable to access camera. Please check permissions.');
+                console.error(err);
+            }
+        }
+
+        function stopCamera() {
+            scanning = false;
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+        }
+
+        function scanFrame() {
+            if (!scanning) return;
+
+            if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (code) {
+                    scanning = false;
+                    stopCamera();
+                    displayResult(code.data);
+                    return;
+                }
+            }
+
+            requestAnimationFrame(scanFrame);
+        }
+
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                processImageFile(file);
+            }
+        }
+
+        function processImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('Please upload a valid image file (JPG, PNG, GIF).');
+                return;
+            }
+
+            statusMessage.textContent = 'Processing image...';
+            errorMessage.classList.remove('show');
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    try {
+                        // Resize large images for faster processing
+                        const maxSize = 800;
+                        let width = img.width;
+                        let height = img.height;
+                        
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = (height / width) * maxSize;
+                                width = maxSize;
+                            } else {
+                                width = (width / height) * maxSize;
+                                height = maxSize;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // Process immediately
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        
+                        if (typeof jsQR === 'undefined') {
+                            showError('Scanner library not loaded. Please refresh the page.');
+                            statusMessage.textContent = '';
+                            return;
+                        }
+
+                        const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                            inversionAttempts: "attemptBoth",
+                        });
+
+                        statusMessage.textContent = '';
+
+                        if (code && code.data) {
+                            displayResult(code.data);
+                        } else {
+                            showError('No QR code detected. Make sure the QR code is clear, well-lit, and not blurry.');
+                        }
+                    } catch (err) {
+                        showError('Error processing image: ' + err.message);
+                        statusMessage.textContent = '';
+                        console.error('Processing error:', err);
+                    }
+                };
+                img.onerror = () => {
+                    showError('Failed to load image. The file may be corrupted or in an unsupported format.');
+                    statusMessage.textContent = '';
+                };
+                img.src = e.target.result;
+            };
+            reader.onerror = () => {
+                showError('Failed to read file. Please try again.');
+                statusMessage.textContent = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayResult(data) {
+            statusMessage.textContent = '';
+            resultContent.textContent = data;
+            resultContainer.classList.add('show');
+
+            // Detect type
+            let type = 'Text';
+            const openBtn = document.getElementById('openBtn');
+            
+            if (data.startsWith('http://') || data.startsWith('https://')) {
+                type = 'URL';
+                openBtn.style.display = 'flex';
+                openBtn.onclick = () => window.open(data, '_blank');
+            } else if (data.startsWith('mailto:')) {
+                type = 'Email';
+                openBtn.style.display = 'flex';
+                openBtn.onclick = () => window.location.href = data;
+            } else if (data.startsWith('WIFI:')) {
+                type = 'WiFi';
+                openBtn.style.display = 'none';
+            } else {
+                openBtn.style.display = 'none';
+            }
+
+            resultType.textContent = type;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('show');
+        }
+
+        // Copy button
+        document.getElementById('copyBtn').addEventListener('click', () => {
+            const text = resultContent.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                const copyBtn = document.getElementById('copyBtn');
+                const originalText = copyBtn.innerHTML;
+                copyBtn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Copied!';
+                setTimeout(() => {
+                    copyBtn.innerHTML = originalText;
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
