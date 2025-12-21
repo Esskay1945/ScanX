@@ -25,4 +25,5 @@ Quick mobile scanning
 Works on all modern browsers with camera access (Chrome, Firefox, Safari, Edge). Fully responsive for desktop and mobile devices.
 📄 License
 Free to use and modify for personal and commercial projects.
+
 Link for project: https://scannx.netlify.app/
